@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "google-open": "node puppeteer/google-open.js"
+  }
+}
