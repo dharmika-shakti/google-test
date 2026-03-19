@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/google-open.js": {
+      "maxDuration": 60
+    }
+  }
+}

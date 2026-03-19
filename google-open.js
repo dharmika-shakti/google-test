@@ -1,42 +1,39 @@
-import puppeteer from 'puppeteer';
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
 
-async function main() {
-  console.log('[INIT] Starting Google open test');
-
-  // Decide headless from env (default headless on server)
-  const forceHeadless = (v) => /^(1|true|yes)$/i.test(String(v || '').trim());
-  const hasDisplay = process.platform === 'win32' || (process.env.DISPLAY && process.env.DISPLAY.length > 0);
-  const RUN_HEADLESS = forceHeadless(process.env.HSN_HEADLESS) || (!hasDisplay && process.platform !== 'win32');
-
-  const launchOptions = {
-    headless: RUN_HEADLESS ? true : false,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-    ],
-    defaultViewport: RUN_HEADLESS ? { width: 1280, height: 800 } : null,
-  };
+export default async function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
+  }
 
   let browser;
   try {
-    console.log('[BROWSER_LAUNCH] Launching browser...');
-    browser = await puppeteer.launch(launchOptions);
+    const executablePath = await chromium.executablePath();
+
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath,
+      headless: chromium.headless,
+    });
+
     const page = await browser.newPage();
-    console.log('[NAVIGATE] Going to https://www.google.com/');
-    await page.goto('https://www.google.com/', { waitUntil: 'networkidle2', timeout: 60000 });
-    console.log('[DONE] Google loaded successfully');
+    await page.goto("https://www.google.com/", {
+      waitUntil: "networkidle2",
+      timeout: 60000,
+    });
+
+    return res.status(200).json({
+      ok: true,
+      message: "Google opened successfully",
+      title: await page.title(),
+    });
   } catch (err) {
-    console.error('[ERROR]', err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Unknown error",
+    });
   } finally {
-    if (browser) {
-      await browser.close().catch(() => {});
-    }
+    if (browser) await browser.close().catch(() => {});
   }
 }
-
-main().catch((e) => {
-  console.error('[FATAL]', e);
-  process.exit(1);
-});
